@@ -273,19 +273,3 @@ void uart_telemetry_on_rx_complete(void)
     uart_telemetry_rx_byte(s_rx_byte);
     uart_telemetry_start_rx();
 }
-
-/**
- * @brief Ngắt nhận USART1 trực tiếp (chạy khi không dùng HAL)
- */
-__attribute__((weak)) void USART1_IRQHandler(void)
-{
-    if (USART1->SR & USART_SR_RXNE) {
-        uint8_t b = (uint8_t)(USART1->DR & 0xFF);
-        uart_telemetry_rx_byte(b);
-    }
-    if (USART1->SR & USART_SR_ORE) {
-        volatile uint32_t dummy = USART1->SR;
-        dummy = USART1->DR;
-        (void)dummy;
-    }
-}

@@ -196,15 +196,3 @@ bool stepper_has_tick_error(void)
 {
     return s_tick_error;
 }
-
-
-/**
- * @brief Ngắt TIM3 trực tiếp (chạy khi CubeMX chưa cấu hình HAL TIM)
- */
-__attribute__((weak)) void TIM3_IRQHandler(void)
-{
-    if (TIM3->SR & TIM_SR_UIF) {
-        TIM3->SR &= ~TIM_SR_UIF;
-        stepper_tick_isr();
-    }
-}

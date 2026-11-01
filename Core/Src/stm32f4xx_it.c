@@ -199,5 +199,44 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /* USER CODE BEGIN 1 */
+#include "stepper.h"
+#include "uart_telemetry.h"
 
+/**
+ * @brief Ngắt TIM3: tạo xung STEP cho 2 motor TMC2208 (20 kHz).
+ */
+void TIM3_IRQHandler(void)
+{
+    if (TIM3->SR & TIM_SR_UIF) {
+        TIM3->SR &= ~TIM_SR_UIF;
+        stepper_tick_isr();
+    }
+}
+
+/**
+ * @brief Ngắt EXTI3: MPU6050 DATA_READY trên PB3.
+ */
+void EXTI3_IRQHandler(void)
+{
+    if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_3) != RESET) {
+        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_3);
+        HAL_GPIO_EXTI_Callback(GPIO_PIN_3);
+    }
+}
+
+/**
+ * @brief Ngắt USART1: nhận dữ liệu telemetry từ ESP32-S3 (PA9 TX, PA10 RX).
+ */
+void USART1_IRQHandler(void)
+{
+    if (USART1->SR & USART_SR_RXNE) {
+        uint8_t b = (uint8_t)(USART1->DR & 0xFF);
+        uart_telemetry_rx_byte(b);
+    }
+    if (USART1->SR & USART_SR_ORE) {
+        volatile uint32_t dummy = USART1->SR;
+        dummy = USART1->DR;
+        (void)dummy;
+    }
+}
 /* USER CODE END 1 */

@@ -63,8 +63,10 @@ void app_init(void)
 
     /* Khởi tạo máy trạng thái cân bằng */
     balance_init();
+#ifndef APP_TEST_STEPPER
     balance_run(); /* Thực hiện STATE_INIT (khởi tạo MPU6050) */
     balance_run(); /* Thực hiện STATE_CALIBRATE (hiệu chuẩn bias gyro) */
+#endif
 
 #ifdef HAL_TIM_MODULE_ENABLED
     /* Bật TIM3 nếu CubeMX đã sinh HAL TIM */
@@ -209,14 +211,3 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
 }
 #endif
-
-/**
- * @brief Ngắt EXTI3 cho chân PB3 (MPU6050 INT)
- */
-__attribute__((weak)) void EXTI3_IRQHandler(void)
-{
-    if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_3) != RESET) {
-        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_3);
-        HAL_GPIO_EXTI_Callback(GPIO_PIN_3);
-    }
-}
