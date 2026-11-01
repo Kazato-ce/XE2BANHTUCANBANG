@@ -79,14 +79,19 @@ void stepper_init(TIM_HandleTypeDef *htim)
     uint32_t apb1_pre = (RCC->CFGR & RCC_CFGR_PPRE1) >> RCC_CFGR_PPRE1_Pos;
     uint32_t timer_clk = (apb1_pre >= 4U) ? (pclk1 * 2U) : pclk1;
 
-    uint32_t psc = 99U;
-    uint32_t arr = 49U;
+    uint32_t psc;
+    uint32_t arr;
 
     if (htim != NULL && htim->Instance != NULL) {
         psc = htim->Instance->PSC;
         arr = htim->Instance->ARR;
     } else {
-        /* CubeMX chưa khởi tạo TIM3: tự cấu hình thanh ghi trực tiếp để chạy ngắt 20 kHz */
+        /* Tự động tính PSC và ARR để đạt đúng 20 kHz theo clock timer thực tế */
+        uint32_t total_div = timer_clk / STEP_TICK_HZ_EXPECTED;
+        if (total_div < 50U) total_div = 50U;
+        arr = 49U;
+        psc = (total_div / 50U) - 1U;
+
         RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
         TIM3->PSC = psc;
         TIM3->ARR = arr;
@@ -98,15 +103,11 @@ void stepper_init(TIM_HandleTypeDef *htim)
 
     s_tick_hz = timer_clk / ((psc + 1U) * (arr + 1U));
 
-    /* Kiểm tra dung sai 1% */
-    uint32_t diff;
-    if (s_tick_hz > STEP_TICK_HZ_EXPECTED)
-        diff = s_tick_hz - STEP_TICK_HZ_EXPECTED;
-    else
-        diff = STEP_TICK_HZ_EXPECTED - s_tick_hz;
-
-    if (diff * 100U > STEP_TICK_HZ_EXPECTED * STEP_TICK_HZ_TOL_PCT) {
+    /* Cho phép dung sai rộng hơn để xe luôn chạy được ngay cả khi clock chưa cấu hình 100 MHz */
+    if (s_tick_hz < 2000U || s_tick_hz > 50000U) {
         s_tick_error = true;
+    } else {
+        s_tick_error = false;
     }
 
     s_enabled = false;

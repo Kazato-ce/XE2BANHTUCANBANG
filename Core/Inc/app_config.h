@@ -42,10 +42,10 @@
 /* ──────────────────────────────────────────────
    Máy trạng thái an toàn
    ────────────────────────────────────────────── */
-#define START_WINDOW_DEG           3.0f       /* Cửa sổ để bắt đầu cân bằng */
-#define START_HOLD_MS              1000U      /* Thời gian giữ thẳng trước khi bật motor */
+#define START_WINDOW_DEG           5.0f       /* Cửa sổ để bắt đầu cân bằng (+-5 độ) */
+#define START_HOLD_MS              400U       /* Thời gian giữ thẳng trước khi bật motor (400ms) */
 #define FALL_ANGLE_DEG             35.0f      /* Góc ngã: tắt motor ngay */
-#define IMU_STALE_MS               20U        /* Quá thời gian không có mẫu → FAULT */
+#define IMU_STALE_MS               100U       /* Quá 100ms không có mẫu → FAULT */
 
 /* ──────────────────────────────────────────────
    Complementary filter

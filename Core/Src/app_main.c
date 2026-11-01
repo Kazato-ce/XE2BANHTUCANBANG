@@ -63,6 +63,8 @@ void app_init(void)
 
     /* Khởi tạo máy trạng thái cân bằng */
     balance_init();
+    balance_run(); /* Thực hiện STATE_INIT (khởi tạo MPU6050) */
+    balance_run(); /* Thực hiện STATE_CALIBRATE (hiệu chuẩn bias gyro) */
 
 #ifdef HAL_TIM_MODULE_ENABLED
     /* Bật TIM3 nếu CubeMX đã sinh HAL TIM */
@@ -117,9 +119,21 @@ void app_loop(void)
     }
 
 #else
-    /* ── Chế độ cân bằng bình thường ── */
+    /* ── Chế độ cân bằng: kích hoạt bằng ngắt EXTI hoặc chu kỳ 5ms (200 Hz) ── */
+    static uint32_t s_last_imu_poll_ms = 0;
+    uint32_t now_ms = HAL_GetTick();
+
+    bool should_read_imu = false;
     if (g_imu_data_ready) {
         g_imu_data_ready = 0;
+        should_read_imu = true;
+    } else if ((now_ms - s_last_imu_poll_ms) >= 5U) {
+        /* Chạy định kỳ 200 Hz ngay cả khi người dùng không cắm chân INT của MPU6050 */
+        should_read_imu = true;
+    }
+
+    if (should_read_imu) {
+        s_last_imu_poll_ms = now_ms;
 
         MpuData_t d;
         uint32_t t0 = DWT->CYCCNT;
@@ -127,6 +141,8 @@ void app_loop(void)
         if (mpu6050_read(&d) == MPU_OK) {
             float dt_s = attitude_measure_dt();
             balance_update_imu(&d, dt_s);
+            extern volatile uint32_t g_last_sample_ms;
+            g_last_sample_ms = now_ms;
             g_dbg.i2c_err_count = 0;
         } else {
             g_dbg.i2c_err_count++;
@@ -193,3 +209,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
     }
 }
 #endif
+
+/**
+ * @brief Ngắt EXTI3 cho chân PB3 (MPU6050 INT)
+ */
+__attribute__((weak)) void EXTI3_IRQHandler(void)
+{
+    if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_3) != RESET) {
+        __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_3);
+        HAL_GPIO_EXTI_Callback(GPIO_PIN_3);
+    }
+}
